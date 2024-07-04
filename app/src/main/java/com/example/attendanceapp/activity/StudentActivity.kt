@@ -51,7 +51,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
     private lateinit var statusList: ArrayList<Status>
     private lateinit var dbRef: DatabaseReference
     private lateinit var statusRef: DatabaseReference
-    private lateinit var attendanceSheet : MutableMap<String, MutableMap<String, String>>
+    private lateinit var attendanceSheet: MutableMap<String, MutableMap<String, String>>
     private var className: String? = null
     private var subjectName: String? = null
     private var cid: String? = null
@@ -76,7 +76,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         cid = intent?.getStringExtra("cid").toString()
         setToolBar()
 
-        studentAdapter = StudentAdapter(studentList, dateSelected,  this, this) { position, view ->
+        studentAdapter = StudentAdapter(studentList, dateSelected, this, this) { position, view ->
             selectedStudentPosition = position
             binding.rlvStudent.showContextMenuForChild(view)
         }
@@ -91,7 +91,8 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         registerForContextMenu(binding.rlvStudent)
 
     }
-//cài đặt tool bar cho màn hình
+
+    //cài đặt tool bar cho màn hình
     @SuppressLint("SetTextI18n")
     private fun setToolBar() {
         bindingToolbarBinding = ToolbarBinding.inflate(layoutInflater)
@@ -99,16 +100,20 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         bindingToolbarBinding.txtTitle.text = className
         bindingToolbarBinding.txtSubTitle.text = "$subjectName | $dateSelected"
 
+        bindingToolbarBinding.btnSave.visibility = View.INVISIBLE
+
         bindingToolbarBinding.btnBack.setOnClickListener { onBackPressed() }
         setSupportActionBar(bindingToolbarBinding.toolbar)
         binding.root.addView(bindingToolbarBinding.root)
     }
-//cài đặt menu option
+
+    //cài đặt menu option
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.student_menu, menu)
         return true
     }
-// xử lí sự kiện khi chọn item trên menu
+
+    // xử lí sự kiện khi chọn item trên menu
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.add_student -> {
@@ -130,7 +135,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         }
     }
 
-// hàm thay đổi ngày thaáng
+    // hàm thay đổi ngày thaáng
     private fun changeDate() {
         val initialYear = calendar.get(Calendar.YEAR)
         val initialMonth = calendar.get(Calendar.MONTH)
@@ -145,7 +150,6 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 dateSelected = dateFormat.format(calendar.time)
                 updateTitle(dateSelected)
-//                filterStudentByDate(dateSelected)
                 studentAdapter.updateStatusWithTimeSelected(dateSelected)
             },
             initialYear, initialMonth, initialDay
@@ -158,7 +162,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         bindingToolbarBinding.txtSubTitle.text = "$subjectName | $dateSelected"
     }
 
-// xử lí khi người dùng export file xml điểm danh
+    // xử lí khi người dùng export file xml điểm danh
     private fun generateXlsFile() {
         documentUri?.let { uri ->
             try {
@@ -167,27 +171,30 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
                 var rowIndex = 0
 
                 val headerRow: Row = sheet.createRow(rowIndex++)
-                headerRow.createCell(0).setCellValue("Roll")
+                headerRow.createCell(0).setCellValue("ID")
                 headerRow.createCell(1).setCellValue("Name")
 
                 val date = attendanceSheet.keys.sorted()
-                for ((i, date) in date.withIndex()){
-                    headerRow.createCell(2 + i).setCellValue(date)
+                for ((i, dateItem) in date.withIndex()) {
+                    headerRow.createCell(2 + i).setCellValue(dateItem)
                 }
 
                 for (student in studentList) {
-                    val status = statusList.find { it.uid == student.uid && it.date == dateSelected }?.status ?: "N/A"
+                    val status =
+                        statusList.find { it.uid == student.uid && it.date == dateSelected }?.status
+                            ?: "N/A"
                     val row: Row = sheet.createRow(rowIndex++)
                     row.createCell(0).setCellValue(student.roll)
                     row.createCell(1).setCellValue(student.name)
-                    for ((i, date) in date.withIndex()){
-                        val status = attendanceSheet[date]?.get(student.uid) ?: "N/A"
-                        row.createCell(2+i).setCellValue(status)
+                    for ((i, dateItem) in date.withIndex()) {
+                        val statusItem = attendanceSheet[dateItem]?.get(student.uid) ?: "N/A"
+                        row.createCell(2 + i).setCellValue(statusItem)
                     }
                 }
 
 
-                val fileName = "Student_Record_" + className + "_" + subjectName + "_"+ dateSelected + ".xls"
+                val fileName =
+                    "Student_Record_" + className + "_" + subjectName + "_" + dateSelected + ".xls"
 
                 val documentFileUri = createDocument(uri, fileName)
                 documentFileUri?.let { docUri ->
@@ -202,10 +209,19 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
             }
         }
     }
+
     private fun createDocument(uri: Uri, fileName: String): Uri? {
         return try {
-            val treeUri = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri))
-            DocumentsContract.createDocument(contentResolver, treeUri, "application/vnd.ms-excel", fileName)
+            val treeUri = DocumentsContract.buildDocumentUriUsingTree(
+                uri,
+                DocumentsContract.getTreeDocumentId(uri)
+            )
+            DocumentsContract.createDocument(
+                contentResolver,
+                treeUri,
+                "application/vnd.ms-excel",
+                fileName
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, "Failed to save file", Toast.LENGTH_SHORT).show()
@@ -213,14 +229,18 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         }
     }
 
-    private val documentPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let {
-            contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            documentUri = it
-            Log.d("XlsExportActivity", "Selected URI: $uri")
-            generateXlsFile()
+    private val documentPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                documentUri = it
+                Log.d("XlsExportActivity", "Selected URI: $uri")
+                generateXlsFile()
+            }
         }
-    }
 
     //show dialog để thêm học sinh
     @SuppressLint("NotifyDataSetChanged", "SetTextI18n")
@@ -253,14 +273,16 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
 
         }
     }
+
     //lưu thông tin học sinh lên firebase và update view
     @SuppressLint("NotifyDataSetChanged")
     private fun saveStudents(roll: String, name: String) {
         dbRef = FirebaseDatabase.getInstance().getReference("students")
         val uid = dbRef.push().key!!
-        val studentItem = Students(uid, cid, roll, name)
-        dbRef.child(uid).setValue(studentItem)
+        val studentSave = Students(uid, cid, roll, name)
+        dbRef.child(uid).setValue(studentSave)
             .addOnCompleteListener {
+                studentList.add(studentSave)
                 studentAdapter.notifyDataSetChanged()
                 Log.d("student", "Insert student successfully")
             }.addOnFailureListener { err ->
@@ -269,7 +291,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
 
         val sid = FirebaseDatabase.getInstance().getReference("status").push().key!!
         val today = LocalDate.now().toString()
-        val statusStudent = Status(sid, uid, today, "A")
+        val statusStudent = Status(sid, uid, today, "")
         FirebaseDatabase.getInstance().getReference("status").child(sid).setValue(statusStudent)
             .addOnCompleteListener {
                 studentAdapter.notifyDataSetChanged()
@@ -279,6 +301,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
             }
 
     }
+
     //thay đổi trạng thái của sinh viên
     override fun OnStudentItemClick(position: Int) {
         changeStatus(position)
@@ -300,9 +323,9 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
                         }
                     }
                 }
-                val today = LocalDate.now().toString()
+
                 for (statusItem in list) {
-                    if (statusItem.date == today) {
+                    if (statusItem.date == dateSelected) {
                         statusItem.status = if (statusItem.status == "P") "A" else "P"
                         statusItem.sid?.let { sid ->
                             // Sử dụng sid để cập nhật trạng thái
@@ -319,7 +342,6 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
                     }
                 }
 
-
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -330,7 +352,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
 
     }
 
-//tạo context menu trên item list
+    //tạo context menu trên item list
     override fun onCreateContextMenu(
         menu: ContextMenu?,
         v: View?,
@@ -340,7 +362,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         super.onCreateContextMenu(menu, v, menuInfo)
     }
 
-// xử lí khi người dùng chọn item trên context menu
+    // xử lí khi người dùng chọn item trên context menu
     override fun onContextItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.edit -> {
@@ -358,7 +380,8 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         }
 
     }
-// xoá student khi chọn
+
+    // xoá student khi chọn
     private fun deleteStudent(position: Int) {
         val studentItemDelete = studentList[position]
         val uid = studentItemDelete.uid
@@ -375,7 +398,8 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
         studentAdapter.notifyItemRemoved(position)
 
     }
-// update student và update lên firebase
+
+    // update student và update lên firebase
     private fun showDialogUpdate(position: Int) {
         val studentItemUpdate = studentList[position]
         val uid = studentItemUpdate.uid
@@ -418,7 +442,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
 
     }
 
-// khởi tạo và lấy dữ danh sách sinh viên thuộc lớp đã chọn
+    // khởi tạo và lấy dữ danh sách sinh viên thuộc lớp đã chọn
     private fun fetchStudent() {
         dbRef = FirebaseDatabase.getInstance().reference
         val query: Query = dbRef.child("students").orderByChild("cid").equalTo(cid)
@@ -446,6 +470,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
             }
         })
     }
+
     // khởi tạo và lấy dữ liệu điểm danh(nếu có)
     private fun fetchStatus() {
         statusRef.addValueEventListener(object : ValueEventListener {
@@ -457,7 +482,7 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
                         val date = it.date ?: ""
                         val uid = it.uid ?: ""
                         val status = it.status ?: ""
-                        if (!attendanceSheet.containsKey(date)){
+                        if (!attendanceSheet.containsKey(date)) {
                             attendanceSheet[date] = mutableMapOf()
                         }
                         attendanceSheet[date]?.set(uid, status)
@@ -509,40 +534,5 @@ class StudentActivity : AppCompatActivity(), OnStudentItemClickListener {
             }
         })
     }
-
-
-
-
-
-
-
-//    private val resultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-//        uri?.let {
-//            readData(this, it)
-//        }
-//    }
-
-
-//    private fun readData(context: Context, uri:Uri){
-//        try {
-//            val inputStream: InputStream?= context.contentResolver.openInputStream(uri)
-//            val workBook = Workbook.getWorkbook(inputStream)
-//            val sheet = workBook.getSheet(0)
-//
-//
-//            for(row in 0 until sheet.rows){
-//                val roll = sheet.getCell(0,row).contents
-//                val name = sheet.getCell(1,row).contents
-//                Log.d("file", name)
-//                saveStudents(roll, name)
-//            }
-//            workBook.close()
-//            inputStream?.close()
-//        }catch (e: Exception){
-//            e.printStackTrace()
-//            Toast.makeText(context, "Failed to read Excel file", Toast.LENGTH_SHORT).show()
-//        }
-//
-//    }
 
 }
